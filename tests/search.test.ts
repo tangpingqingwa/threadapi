@@ -6,26 +6,28 @@ import { fileURLToPath } from "node:url";
 import type {
   ConversationResult,
   FetchPostResult,
-  TimelineRequest,
+  SearchRequest,
+  SearchResult,
   TimelineResult,
   XAdapter,
 } from "../src/adapters/types.js";
+import { createLiveXAdapter } from "../src/adapters/x/index.js";
 import { createFixtureAdapter } from "../src/adapters/x/fixture.js";
 import { buildApp } from "../src/app.js";
 import { getCredits } from "../src/billing/credits.js";
 import { createKey } from "../src/billing/keys.js";
-import { normalizeHandle } from "../src/core/timeline.js";
 import { openDatabase } from "../src/db.js";
-import type { ErrorCode, UserPostsPage } from "../src/types.js";
+import type { ErrorCode, SearchPage } from "../src/types.js";
 
-const KEY = "xk_test_timeline_fixture";
-const PUBLIC_HANDLE = "thread_fixture";
-const PROTECTED_HANDLE = "locked_account";
-const MISSING_HANDLE = "no_such_user";
-const QUOTE_POST = "1900000000000000003";
+const KEY = "xk_test_search_fixture";
+const QUERY = "widgetlaunch";
+const FIRST_HIT = "1950000000000000001";
+const QUOTE_HIT = "1950000000000000002";
+const THIRD_HIT = "1950000000000000003";
+const PROTECTED_TEXT = "Should never be returned.";
 
 type OkPage = {
-  data: UserPostsPage;
+  data: SearchPage;
   meta: {
     cached: boolean;
     creditsCharged: number;
@@ -57,43 +59,36 @@ function auth() {
   return { authorization: `Bearer ${KEY}` };
 }
 
-function timelineUrl(handle: string, query: Record<string, string> = {}): string {
-  const params = new URLSearchParams(query);
-  const suffix = params.size > 0 ? `?${params.toString()}` : "";
-  return `/v1/users/${encodeURIComponent(handle)}/posts${suffix}`;
+function searchUrl(query: Record<string, string>): string {
+  return `/v1/search?${new URLSearchParams(query).toString()}`;
 }
 
-test("normalizeHandle strips @ and rejects empty or illegal handles", () => {
-  assert.equal(normalizeHandle("@Thread_Fixture"), "thread_fixture");
-  assert.equal(normalizeHandle("locked_account"), "locked_account");
-  assert.equal(normalizeHandle("   "), null);
-  assert.equal(normalizeHandle("bad-handle"), null);
-  assert.equal(normalizeHandle("waytoolonghandle1"), null);
-});
-
-test("GET /v1/users/:handle/posts returns a public timeline page and charges 1", async () => {
+test("GET /v1/search returns recent public hits and charges 1", async () => {
   const { app, db } = await appWithKey(10);
   const keyRow = db.prepare<[], { id: string }>("SELECT id FROM keys").get();
   assert.ok(keyRow);
 
   const response = await app.inject({
     method: "GET",
-    url: timelineUrl(PUBLIC_HANDLE, { limit: "5" }),
+    url: searchUrl({ q: QUERY, limit: "10" }),
     headers: auth(),
   });
   assert.equal(response.statusCode, 200);
   const body = response.json() as OkPage;
-  assert.equal(body.data.user.handle, PUBLIC_HANDLE);
-  assert.ok(body.data.posts.length >= 1);
-  assert.ok(body.data.posts.length <= 5);
-  assert.equal(
-    body.data.posts.every((post) => post.author.handle === PUBLIC_HANDLE),
-    true,
-  );
+  assert.equal(body.data.query, QUERY);
+  assert.ok(body.data.posts.length >= 3);
+  const ids = body.data.posts.map((post) => post.id);
+  assert.ok(ids.includes(FIRST_HIT));
+  assert.ok(ids.includes(QUOTE_HIT));
+  assert.ok(ids.includes(THIRD_HIT));
   const times = body.data.posts.map((post) => Date.parse(post.createdAt));
   assert.deepEqual(
     times,
     [...times].sort((a, b) => b - a),
+  );
+  assert.equal(
+    body.data.posts.some((post) => post.text.includes(PROTECTED_TEXT)),
+    false,
   );
   assert.equal(body.meta.cached, false);
   assert.equal(body.meta.creditsCharged, 1);
@@ -101,27 +96,28 @@ test("GET /v1/users/:handle/posts returns a public timeline page and charges 1",
   assert.equal(getCredits(db, keyRow.id), 9);
 });
 
-test("timeline pages with cursor and keeps quotes one level deep", async () => {
+test("search pages with cursor and keeps quotes one level deep", async () => {
   const { app, db } = await appWithKey(8);
   const keyRow = db.prepare<[], { id: string }>("SELECT id FROM keys").get();
   assert.ok(keyRow);
 
   const first = await app.inject({
     method: "GET",
-    url: timelineUrl(`@${PUBLIC_HANDLE}`, { limit: "3" }),
+    url: searchUrl({ q: QUERY, limit: "2" }),
     headers: auth(),
   });
   assert.equal(first.statusCode, 200);
   const firstBody = first.json() as OkPage;
-  assert.equal(firstBody.data.posts.length, 3);
+  assert.equal(firstBody.data.posts.length, 2);
   assert.equal(typeof firstBody.data.nextCursor, "string");
   assert.ok(firstBody.data.nextCursor);
 
   const second = await app.inject({
     method: "GET",
-    url: timelineUrl(PUBLIC_HANDLE, {
+    url: searchUrl({
+      q: QUERY,
       cursor: firstBody.data.nextCursor ?? "",
-      limit: "3",
+      limit: "2",
     }),
     headers: auth(),
   });
@@ -134,80 +130,41 @@ test("timeline pages with cursor and keeps quotes one level deep", async () => {
     false,
   );
 
-  const wide = await app.inject({
-    method: "GET",
-    url: timelineUrl(PUBLIC_HANDLE, { limit: "50" }),
-    headers: auth(),
-  });
-  assert.equal(wide.statusCode, 200);
-  const quoted = (wide.json() as OkPage).data.posts.find((post) => post.id === QUOTE_POST);
+  const quoted = firstBody.data.posts.find((post) => post.id === QUOTE_HIT)
+    ?? secondBody.data.posts.find((post) => post.id === QUOTE_HIT);
   assert.ok(quoted);
   assert.ok(quoted.quote);
   assert.equal(quoted.quote.id, "1910000000000000099");
   assert.equal(quoted.quote.quote, null);
-  assert.equal(getCredits(db, keyRow.id), 5);
+  assert.equal(getCredits(db, keyRow.id), 6);
 });
 
-test("SPEC 4: protected user timeline is 403 and 0 credits", async () => {
-  let fetched = false;
-  const adapter: XAdapter = {
-    async fetchPost(): Promise<FetchPostResult> {
-      throw new Error("timeline must not call fetchPost");
-    },
-    async fetchConversation(): Promise<ConversationResult> {
-      throw new Error("timeline must not call fetchConversation");
-    },
-    async fetchTimeline(request: TimelineRequest): Promise<TimelineResult> {
-      fetched = true;
-      return createFixtureAdapter().fetchTimeline(request);
-    },
-    async search() {
-      throw new Error("timeline must not call search");
-    },
-  };
-  const { app, db } = await appWithKey(5, adapter);
-  const keyRow = db.prepare<[], { id: string }>("SELECT id FROM keys").get();
-  assert.ok(keyRow);
-
-  const response = await app.inject({
-    method: "GET",
-    url: timelineUrl(PROTECTED_HANDLE),
-    headers: auth(),
-  });
-  assert.equal(response.statusCode, 403);
-  const body = response.json() as ErrBody;
-  assert.equal(body.error.code, "protected_user");
-  assert.equal(body.error.retryable, false);
-  assert.equal(body.meta.creditsCharged, 0);
-  assert.equal(fetched, true);
-  assert.equal(getCredits(db, keyRow.id), 5);
-});
-
-test("unknown handle is 404 user_not_found and 0 credits", async () => {
+test("empty search page is 200 with 0 credits", async () => {
   const { app, db } = await appWithKey(5);
   const keyRow = db.prepare<[], { id: string }>("SELECT id FROM keys").get();
   assert.ok(keyRow);
 
   const response = await app.inject({
     method: "GET",
-    url: timelineUrl(MISSING_HANDLE),
+    url: searchUrl({ q: "zzzz-no-such-token" }),
     headers: auth(),
   });
-  assert.equal(response.statusCode, 404);
-  const body = response.json() as ErrBody;
-  assert.equal(body.error.code, "user_not_found");
+  assert.equal(response.statusCode, 200);
+  const body = response.json() as OkPage;
+  assert.deepEqual(body.data.posts, []);
+  assert.equal(body.data.nextCursor, null);
   assert.equal(body.meta.creditsCharged, 0);
   assert.equal(getCredits(db, keyRow.id), 5);
 });
 
-test("repeat timeline page is a cache hit and still charges 1", async () => {
+test("repeat search page is a cache hit and still charges 1 when there are hits", async () => {
   const { app, db } = await appWithKey(4);
   const keyRow = db.prepare<[], { id: string }>("SELECT id FROM keys").get();
   assert.ok(keyRow);
 
   const first = await app.inject({
     method: "GET",
-    url: timelineUrl(PUBLIC_HANDLE, { limit: "4" }),
+    url: searchUrl({ q: QUERY, limit: "4" }),
     headers: auth(),
   });
   assert.equal(first.statusCode, 200);
@@ -215,7 +172,7 @@ test("repeat timeline page is a cache hit and still charges 1", async () => {
 
   const second = await app.inject({
     method: "GET",
-    url: timelineUrl(PUBLIC_HANDLE, { limit: "4" }),
+    url: searchUrl({ q: QUERY, limit: "4" }),
     headers: auth(),
   });
   assert.equal(second.statusCode, 200);
@@ -227,23 +184,31 @@ test("repeat timeline page is a cache hit and still charges 1", async () => {
   assert.equal(getCredits(db, keyRow.id), 2);
 });
 
-test("invalid handle, limit, cursor, and missing bearer charge 0", async () => {
+test("missing q, invalid limit, cursor, and missing bearer charge 0", async () => {
   const { app, db } = await appWithKey(5);
   const keyRow = db.prepare<[], { id: string }>("SELECT id FROM keys").get();
   assert.ok(keyRow);
 
-  const badHandle = await app.inject({
+  const missing = await app.inject({
     method: "GET",
-    url: timelineUrl("bad-handle"),
+    url: "/v1/search",
     headers: auth(),
   });
-  assert.equal(badHandle.statusCode, 400);
-  assert.equal((badHandle.json() as ErrBody).error.code, "invalid_request");
-  assert.equal((badHandle.json() as ErrBody).meta.creditsCharged, 0);
+  assert.equal(missing.statusCode, 400);
+  assert.equal((missing.json() as ErrBody).error.code, "invalid_request");
+  assert.equal((missing.json() as ErrBody).meta.creditsCharged, 0);
+
+  const blank = await app.inject({
+    method: "GET",
+    url: searchUrl({ q: "   " }),
+    headers: auth(),
+  });
+  assert.equal(blank.statusCode, 400);
+  assert.equal((blank.json() as ErrBody).error.code, "invalid_request");
 
   const badLimit = await app.inject({
     method: "GET",
-    url: timelineUrl(PUBLIC_HANDLE, { limit: "51" }),
+    url: searchUrl({ q: QUERY, limit: "51" }),
     headers: auth(),
   });
   assert.equal(badLimit.statusCode, 400);
@@ -251,7 +216,7 @@ test("invalid handle, limit, cursor, and missing bearer charge 0", async () => {
 
   const badCursor = await app.inject({
     method: "GET",
-    url: timelineUrl(PUBLIC_HANDLE, { cursor: "!!" }),
+    url: searchUrl({ q: QUERY, cursor: "!!" }),
     headers: auth(),
   });
   assert.equal(badCursor.statusCode, 400);
@@ -259,7 +224,7 @@ test("invalid handle, limit, cursor, and missing bearer charge 0", async () => {
 
   const unauth = await app.inject({
     method: "GET",
-    url: timelineUrl(PUBLIC_HANDLE),
+    url: searchUrl({ q: QUERY }),
   });
   assert.equal(unauth.statusCode, 401);
   assert.equal((unauth.json() as ErrBody).error.code, "unauthorized");
@@ -267,11 +232,11 @@ test("invalid handle, limit, cursor, and missing bearer charge 0", async () => {
   assert.equal(getCredits(db, keyRow.id), 5);
 });
 
-test("HTTP user route calls core/timeline only; zero credits is 402 before adapter", async () => {
+test("HTTP search route calls core/search only; zero credits is 402 before adapter", async () => {
   const routesDir = join(dirname(fileURLToPath(import.meta.url)), "../src/http/routes");
-  const source = readFileSync(join(routesDir, "users.ts"), "utf8");
+  const source = readFileSync(join(routesDir, "search.ts"), "utf8");
   assert.equal(source.includes("adapters/x"), false);
-  assert.match(source, /from "\.\.\/\.\.\/core\/timeline\.js"/);
+  assert.match(source, /from "\.\.\/\.\.\/core\/search\.js"/);
 
   let fetched = false;
   const adapter: XAdapter = {
@@ -287,7 +252,7 @@ test("HTTP user route calls core/timeline only; zero credits is 402 before adapt
       fetched = true;
       return { ok: false, code: "upstream_blocked" };
     },
-    async search() {
+    async search(): Promise<SearchResult> {
       fetched = true;
       return { ok: false, code: "upstream_blocked" };
     },
@@ -298,7 +263,7 @@ test("HTTP user route calls core/timeline only; zero credits is 402 before adapt
 
   const response = await app.inject({
     method: "GET",
-    url: timelineUrl(PUBLIC_HANDLE),
+    url: searchUrl({ q: QUERY }),
     headers: auth(),
   });
   assert.equal(response.statusCode, 402);
@@ -306,4 +271,51 @@ test("HTTP user route calls core/timeline only; zero credits is 402 before adapt
   assert.equal((response.json() as ErrBody).meta.creditsCharged, 0);
   assert.equal(fetched, false);
   assert.equal(getCredits(db, keyRow.id), 0);
+});
+
+test("live X adapter search is upstream_blocked, not a parsed page", async () => {
+  const { app, db } = await appWithKey(5, createLiveXAdapter());
+  const keyRow = db.prepare<[], { id: string }>("SELECT id FROM keys").get();
+  assert.ok(keyRow);
+
+  const response = await app.inject({
+    method: "GET",
+    url: searchUrl({ q: QUERY }),
+    headers: auth(),
+  });
+  assert.equal(response.statusCode, 503);
+  const body = response.json() as ErrBody;
+  assert.equal(body.error.code, "upstream_blocked");
+  assert.equal(body.error.retryable, true);
+  assert.equal(body.meta.creditsCharged, 0);
+  assert.equal(getCredits(db, keyRow.id), 5);
+});
+
+test("search adapter is invoked with the normalized query", async () => {
+  let seen: SearchRequest | undefined;
+  const adapter: XAdapter = {
+    async fetchPost(): Promise<FetchPostResult> {
+      throw new Error("search must not call fetchPost");
+    },
+    async fetchConversation(): Promise<ConversationResult> {
+      throw new Error("search must not call fetchConversation");
+    },
+    async fetchTimeline(): Promise<TimelineResult> {
+      throw new Error("search must not call fetchTimeline");
+    },
+    async search(request: SearchRequest): Promise<SearchResult> {
+      seen = request;
+      return createFixtureAdapter().search(request);
+    },
+  };
+  const { app } = await appWithKey(3, adapter);
+  const response = await app.inject({
+    method: "GET",
+    url: searchUrl({ q: `  ${QUERY}  `, limit: "3" }),
+    headers: auth(),
+  });
+  assert.equal(response.statusCode, 200);
+  assert.ok(seen);
+  assert.equal(seen.q, QUERY);
+  assert.equal(seen.limit, 3);
 });

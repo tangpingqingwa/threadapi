@@ -13,7 +13,7 @@ fail() {
 }
 
 echo "== contract files =="
-for f in README.md SPEC.md BUILD.md CONTRIBUTING.md scripts/test.sh; do
+for f in README.md SPEC.md BUILD.md CONTRIBUTING.md scripts/test.sh llms.txt; do
   [[ -f "$f" ]] || fail "missing $f"
   [[ -s "$f" ]] || fail "empty $f"
 done
@@ -69,6 +69,53 @@ if [[ -f src/http/routes/users.ts ]]; then
     fail "users route must not import the X adapter or live hosts"
   fi
 fi
+if [[ -f tests/search.test.ts ]]; then
+  grep -q '/v1/search' tests/search.test.ts || fail "tests/search.test.ts missing /v1/search"
+  grep -q 'creditsCharged' tests/search.test.ts || fail "tests/search.test.ts missing credit assertions"
+  grep -q 'upstream_blocked' tests/search.test.ts || fail "tests/search.test.ts missing upstream_blocked"
+  if grep -qE 'api\.twitter\.com|api\.x\.com' tests/search.test.ts; then
+    fail "tests/search.test.ts mentions live X/Twitter hosts"
+  fi
+fi
+if [[ -f src/http/routes/search.ts ]]; then
+  grep -q 'core/search' src/http/routes/search.ts || fail "search route must call core/search"
+  if grep -qE 'adapters/x|api\.twitter\.com|api\.x\.com' src/http/routes/search.ts; then
+    fail "search route must not import the X adapter or live hosts"
+  fi
+fi
+if [[ -f src/core/search.ts ]]; then
+  grep -q 'SEARCH_CREDIT_COST' src/core/search.ts || fail "core/search missing SEARCH_CREDIT_COST"
+fi
+if [[ -f src/adapters/x/index.ts ]]; then
+  grep -q 'upstream_blocked' src/adapters/x/index.ts || fail "live X adapter must fail upstream_blocked"
+  if grep -qE 'fetch\s*\(|api\.twitter\.com|api\.x\.com' src/adapters/x/index.ts; then
+    fail "live X adapter must not parse or fetch live hosts"
+  fi
+fi
+
+echo "== llms.txt + MCP tools =="
+[[ -f src/mcp/server.ts ]] || fail "missing src/mcp/server.ts"
+[[ -f src/mcp/tools.ts ]] || fail "missing src/mcp/tools.ts"
+[[ -f tests/mcp.test.ts ]] || fail "missing tests/mcp.test.ts"
+for tool in unroll_thread get_post list_user_posts search_x; do
+  grep -q "$tool" src/mcp/tools.ts || fail "src/mcp/tools.ts missing $tool"
+  grep -q "$tool" tests/mcp.test.ts || fail "tests/mcp.test.ts missing $tool"
+  grep -q "$tool" llms.txt || fail "llms.txt missing $tool"
+done
+grep -q 'When not to call' llms.txt || fail "llms.txt missing when-not-to-call"
+grep -q 'core/search' src/mcp/tools.ts || fail "MCP tools must call core/search"
+grep -q 'core/thread' src/mcp/tools.ts || fail "MCP tools must call core/thread"
+grep -q 'core/timeline' src/mcp/tools.ts || fail "MCP tools must call core/timeline"
+if grep -R --include='*.ts' -E 'fetch\s*\(|api\.twitter\.com|api\.x\.com' src/mcp >/dev/null 2>&1; then
+  fail "src/mcp must not call live X"
+fi
+
+echo "== HTTP/MCP do not import adapters/x =="
+for dir in src/http src/mcp; do
+  if [[ -d "$dir" ]] && grep -R --include='*.ts' -l 'adapters/x' "$dir" >/dev/null 2>&1; then
+    fail "$dir imported adapters/x"
+  fi
+done
 
 if [[ -f package.json ]]; then
   echo "== install =="

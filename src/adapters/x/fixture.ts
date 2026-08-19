@@ -1,10 +1,12 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { UserPostsPage, XEngagement, XMedia, XPost, XUser } from "../../types.js";
+import type { SearchPage, UserPostsPage, XEngagement, XMedia, XPost, XUser } from "../../types.js";
 import type {
   ConversationResult,
   FetchPostResult,
+  SearchRequest,
+  SearchResult,
   TimelineRequest,
   TimelineResult,
   XAdapter,
@@ -85,6 +87,9 @@ export function createFixtureAdapter(
     async fetchTimeline(request: TimelineRequest): Promise<TimelineResult> {
       return readTimeline(catalog, deleted, request);
     },
+    async search(request: SearchRequest): Promise<SearchResult> {
+      return readSearch(catalog, deleted, request);
+    },
   };
 }
 
@@ -143,6 +148,57 @@ function readTimeline(
     nextCursor: nextOffset < authored.length ? String(nextOffset) : null,
   };
   return { ok: true, page };
+}
+
+function readSearch(
+  catalog: FixtureCatalog,
+  deleted: Set<string>,
+  request: SearchRequest,
+): SearchResult {
+  const start = parseOffsetCursor(request.cursor);
+  if (start === null) {
+    return { ok: true, page: { query: request.q, posts: [], nextCursor: null } };
+  }
+
+  const tokens = tokenizeQuery(request.q);
+  const hits = Object.values(catalog.posts)
+    .filter((record) => {
+      if (deleted.has(record.id)) {
+        return false;
+      }
+      const author = catalog.users[record.authorId];
+      if (author === undefined || author.protected === true) {
+        return false;
+      }
+      return matchesQuery(record, author, tokens);
+    })
+    .sort(compareTimelinePosts)
+    .map((record) => toXPost(catalog, deleted, record, true));
+
+  const posts = hits.slice(start, start + request.limit);
+  const nextOffset = start + request.limit;
+  const page: SearchPage = {
+    query: request.q,
+    posts,
+    nextCursor: nextOffset < hits.length ? String(nextOffset) : null,
+  };
+  return { ok: true, page };
+}
+
+function tokenizeQuery(q: string): string[] {
+  return q
+    .toLowerCase()
+    .split(/\s+/)
+    .map((token) => token.replace(/^[@#]+/, ""))
+    .filter((token) => token.length > 0);
+}
+
+function matchesQuery(record: FixturePostRecord, author: FixtureUser, tokens: string[]): boolean {
+  if (tokens.length === 0) {
+    return false;
+  }
+  const haystack = `${record.text} ${author.handle} ${author.name}`.toLowerCase();
+  return tokens.every((token) => haystack.includes(token));
 }
 
 function findUserByHandle(catalog: FixtureCatalog, handle: string): FixtureUser | undefined {

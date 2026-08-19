@@ -6,8 +6,10 @@ import { healthRoutes } from "./http/routes/health.js";
 import { htmlRoutes } from "./http/routes/html.js";
 import { meRoutes } from "./http/routes/me.js";
 import { postRoutes } from "./http/routes/posts.js";
+import { searchRoutes } from "./http/routes/search.js";
 import { threadRoutes } from "./http/routes/threads.js";
 import { userRoutes } from "./http/routes/users.js";
+import { mcpRoutes } from "./mcp/server.js";
 
 export type BuildAppOptions = {
   logger?: boolean;
@@ -40,5 +42,7 @@ export async function buildApp(
   await app.register(threadRoutes);
   await app.register(postRoutes);
   await app.register(userRoutes);
+  await app.register(searchRoutes);
+  await app.register(mcpRoutes);
   return app;
 }
