@@ -1,5 +1,7 @@
 # ThreadAPI
 
+Build contract: [SPEC.md](./SPEC.md).
+
 X / Twitter thread unroll, single posts, public user timelines, and search. Self-serve.
 
 Official X API still exists. The price is the product gap.
