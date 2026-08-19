@@ -3,6 +3,7 @@ import { createAppAdapter, type XAdapter } from "./adapters/index.js";
 import { bootstrapKeyIfEmpty } from "./billing/keys.js";
 import { openDatabase, type ThreadApiDb } from "./db.js";
 import { healthRoutes } from "./http/routes/health.js";
+import { htmlRoutes } from "./http/routes/html.js";
 import { meRoutes } from "./http/routes/me.js";
 import { postRoutes } from "./http/routes/posts.js";
 import { threadRoutes } from "./http/routes/threads.js";
@@ -33,6 +34,7 @@ export async function buildApp(
     });
   }
   await app.register(healthRoutes);
+  await app.register(htmlRoutes);
   await app.register(meRoutes);
   await app.register(threadRoutes);
   await app.register(postRoutes);
