@@ -70,6 +70,12 @@ export type UserPostsPage = {
   nextCursor: string | null;
 };
 
+export type SearchPage = {
+  query: string;
+  posts: XPost[];
+  nextCursor: string | null;
+};
+
 export type Ok<T> = {
   data: T;
   meta: { cached: boolean; creditsCharged: number; requestId: string; upstreamMs: number };

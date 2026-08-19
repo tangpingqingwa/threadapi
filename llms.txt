@@ -1,0 +1,86 @@
+# ThreadAPI
+
+> Thread URL in. Ordered JSON out. $5/mo, not $200.
+
+Public X / Twitter read API: unroll a thread, fetch a post, page a public timeline, search recent posts. Same envelope on REST and MCP. Independent, not affiliated with X or Twitter.
+
+Skill: not for posting; not for private accounts; not a firehose.
+
+## URLs
+
+- REST: https://api.threadapi.dev
+- MCP Streamable HTTP: https://mcp.threadapi.dev/mcp
+- This file: /llms.txt
+- Server card: /.well-known/mcp/server-card.json
+
+## Auth
+
+```
+Authorization: Bearer xk_live_...
+Authorization: Bearer xk_test_...
+```
+
+Same key space for REST and MCP. No scopes. `xk_test_*` uses recorded fixtures and never hits live X.
+
+## MCP tools
+
+### unroll_thread
+
+Maps to `GET /v1/threads/by-url`. **1 credit** on success, including cache hits.
+
+Arguments: `url` (required) — public `x.com` or `twitter.com` status URL.
+
+`data` is `{ rootId, author, posts, missingIds }`. `posts` is the root plus the contiguous same-author self-reply chain, root first. Side replies from other users are omitted. Quotes are one level deep. Known gaps go in `missingIds`; never invent floor text.
+
+### get_post
+
+Maps to `GET /v1/posts/{id}`. **1 credit** on success, including cache hits.
+
+Arguments: `id` (required) — numeric post id. Optional nested `quote` is one level only.
+
+### list_user_posts
+
+Maps to `GET /v1/users/{handle}/posts`. **1 credit per page**.
+
+Arguments: `handle` (required, with or without `@`), optional `cursor`, optional `limit` (1–50, default 20).
+
+Protected accounts return `protected_user` and charge **0**. Deleted / missing handles return `user_not_found` and charge **0**.
+
+### search_x
+
+Maps to `GET /v1/search`. **1 credit per page with hits** (v1; may become 2 if search COGS is high). Empty pages charge **0**.
+
+Arguments: `q` (required), optional `cursor`, optional `limit` (1–50, default 20).
+
+Recent public posts only. Do not claim a full archive or a firehose.
+
+## When not to call
+
+- Post, like, follow, DM, bookmark, or otherwise write — read-only public content only.
+- Protected / private accounts — expect `protected_user`, never a fabricated timeline.
+- For You / Home / logged-in user data — we do not have it.
+- A complete historical archive or a firehose — search is a recent public window.
+- You need hosted media bytes — we return remote URLs only.
+
+## Errors
+
+Same envelope as REST. `creditsCharged` is always 0 on error.
+
+| code | HTTP | retryable |
+|---|---|---|
+| invalid_request | 400 | no |
+| unauthorized | 401 | no |
+| payment_required | 402 | no |
+| protected_user | 403 | no |
+| not_found | 404 | no |
+| user_not_found | 404 | no |
+| post_not_found | 404 | no |
+| rate_limited | 429 | yes |
+| upstream_blocked | 503 | yes |
+| internal | 500 | yes |
+
+Failed / blocked / deleted calls cost **0 credits**. Prefer `upstream_blocked` over a guessed thread. Never invent missing floors.
+
+## Credits
+
+Free: 100 once. Monthly $5 / 1,000. Success costs 1 (search may later cost 2). Failures cost 0.

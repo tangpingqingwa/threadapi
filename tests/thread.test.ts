@@ -429,6 +429,10 @@ test("zero credits is 402 before adapter work", async () => {
       fetched = true;
       return { ok: false, code: "upstream_blocked" };
     },
+    async search() {
+      fetched = true;
+      return { ok: false, code: "upstream_blocked" };
+    },
   };
   const { app, db } = await appWithKey(0, adapter);
   const keyRow = db.prepare<[], { id: string }>("SELECT id FROM keys").get();

@@ -159,6 +159,9 @@ test("HTML unroller does not charge API credits and stays offline", async () => 
     async fetchTimeline(): Promise<TimelineResult> {
       throw new Error("HTML unroller must not call fetchTimeline");
     },
+    async search() {
+      throw new Error("HTML unroller must not call search");
+    },
   };
   const { app, db } = await htmlApp(adapter);
   const keyRow = db.prepare<[], { id: string }>("SELECT id FROM keys").get();

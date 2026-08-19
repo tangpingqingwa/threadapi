@@ -186,6 +186,39 @@
       "quoteId": null,
       "media": [],
       "engagement": { "replies": 0, "reposts": 0, "likes": 0 }
+    },
+    "1950000000000000001": {
+      "id": "1950000000000000001",
+      "authorId": "u_quoted",
+      "text": "widgetlaunch first hit — recent public post.",
+      "createdAt": "2024-05-03T09:00:00.000Z",
+      "lang": "en",
+      "replyToId": null,
+      "quoteId": null,
+      "media": [],
+      "engagement": { "replies": 0, "reposts": 1, "likes": 4 }
+    },
+    "1950000000000000002": {
+      "id": "1950000000000000002",
+      "authorId": "u_author",
+      "text": "widgetlaunch second hit with a quote.",
+      "createdAt": "2024-05-02T09:00:00.000Z",
+      "lang": "en",
+      "replyToId": null,
+      "quoteId": "1910000000000000099",
+      "media": [],
+      "engagement": { "replies": 0, "reposts": 0, "likes": 2 }
+    },
+    "1950000000000000003": {
+      "id": "1950000000000000003",
+      "authorId": "u_side",
+      "text": "widgetlaunch third hit.",
+      "createdAt": "2024-05-01T09:00:00.000Z",
+      "lang": "en",
+      "replyToId": null,
+      "quoteId": null,
+      "media": [],
+      "engagement": { "replies": 1, "reposts": 0, "likes": 1 }
     }
   },
   "conversations": {
