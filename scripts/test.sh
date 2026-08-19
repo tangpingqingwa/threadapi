@@ -37,6 +37,17 @@ echo "== markdown is UTF-8 text =="
 file -b --mime-encoding README.md SPEC.md CONTRIBUTING.md | grep -qiE 'utf-8|us-ascii' \
   || fail "docs are not UTF-8/ASCII"
 
+echo "== no live X/Twitter in unit tests =="
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  if git grep -nE 'api\.twitter\.com|api\.x\.com' -- 'src/' 'tests/' >/dev/null; then
+    fail "src/ or tests/ mention live X/Twitter hosts"
+  fi
+fi
+if [[ -f tests/thread.test.ts ]]; then
+  grep -q 'SPEC 1' tests/thread.test.ts || fail "tests/thread.test.ts missing SPEC 1"
+  grep -q 'missingIds' tests/thread.test.ts || fail "tests/thread.test.ts missing missingIds"
+fi
+
 if [[ -f package.json ]]; then
   echo "== install =="
   if [[ ! -d node_modules ]]; then
