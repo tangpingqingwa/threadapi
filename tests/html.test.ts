@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
-import type { ConversationResult, FetchPostResult, XAdapter } from "../src/adapters/types.js";
+import type {
+  ConversationResult,
+  FetchPostResult,
+  TimelineResult,
+  XAdapter,
+} from "../src/adapters/types.js";
 import { createFixtureAdapter } from "../src/adapters/x/fixture.js";
 import { buildApp } from "../src/app.js";
 import { getCredits } from "../src/billing/credits.js";
@@ -150,6 +155,9 @@ test("HTML unroller does not charge API credits and stays offline", async () => 
     async fetchConversation(rootId: string): Promise<ConversationResult> {
       conversationCalls += 1;
       return createFixtureAdapter().fetchConversation(rootId);
+    },
+    async fetchTimeline(): Promise<TimelineResult> {
+      throw new Error("HTML unroller must not call fetchTimeline");
     },
   };
   const { app, db } = await htmlApp(adapter);

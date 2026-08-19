@@ -9,6 +9,10 @@ export type {
   FetchPostErr,
   FetchPostOk,
   FetchPostResult,
+  TimelineErr,
+  TimelineOk,
+  TimelineRequest,
+  TimelineResult,
   XAdapter,
 } from "./types.js";
 export { createFixtureAdapter } from "./x/fixture.js";

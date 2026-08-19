@@ -55,6 +55,20 @@ if [[ -f tests/html.test.ts ]]; then
     fail "tests/html.test.ts mentions live X/Twitter hosts"
   fi
 fi
+if [[ -f tests/timeline.test.ts ]]; then
+  grep -q 'SPEC 4' tests/timeline.test.ts || fail "tests/timeline.test.ts missing SPEC 4"
+  grep -q 'protected_user' tests/timeline.test.ts || fail "tests/timeline.test.ts missing protected_user"
+  grep -q '/v1/users/' tests/timeline.test.ts || fail "tests/timeline.test.ts missing user timeline route"
+  if grep -qE 'api\.twitter\.com|api\.x\.com' tests/timeline.test.ts; then
+    fail "tests/timeline.test.ts mentions live X/Twitter hosts"
+  fi
+fi
+if [[ -f src/http/routes/users.ts ]]; then
+  grep -q 'core/timeline' src/http/routes/users.ts || fail "users route must call core/timeline"
+  if grep -qE 'adapters/x|api\.twitter\.com|api\.x\.com' src/http/routes/users.ts; then
+    fail "users route must not import the X adapter or live hosts"
+  fi
+fi
 
 if [[ -f package.json ]]; then
   echo "== install =="

@@ -1,4 +1,4 @@
-import type { XPost, XUser } from "../types.js";
+import type { UserPostsPage, XPost, XUser } from "../types.js";
 
 export type AdapterFailureCode =
   | "post_not_found"
@@ -33,7 +33,26 @@ export type ConversationErr = {
 
 export type ConversationResult = ConversationOk | ConversationErr;
 
+export type TimelineRequest = {
+  handle: string;
+  cursor?: string;
+  limit: number;
+};
+
+export type TimelineOk = {
+  ok: true;
+  page: UserPostsPage;
+};
+
+export type TimelineErr = {
+  ok: false;
+  code: AdapterFailureCode;
+};
+
+export type TimelineResult = TimelineOk | TimelineErr;
+
 export type XAdapter = {
   fetchPost(id: string): Promise<FetchPostResult>;
   fetchConversation(rootId: string): Promise<ConversationResult>;
+  fetchTimeline(request: TimelineRequest): Promise<TimelineResult>;
 };

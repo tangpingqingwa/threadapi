@@ -4,7 +4,12 @@ import { dirname, join } from "node:path";
 import { after, test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { createFixtureAdapter } from "../src/adapters/x/fixture.js";
-import type { ConversationResult, FetchPostResult, XAdapter } from "../src/adapters/types.js";
+import type {
+  ConversationResult,
+  FetchPostResult,
+  TimelineResult,
+  XAdapter,
+} from "../src/adapters/types.js";
 import { buildApp } from "../src/app.js";
 import { getCredits } from "../src/billing/credits.js";
 import { createKey } from "../src/billing/keys.js";
@@ -417,6 +422,10 @@ test("zero credits is 402 before adapter work", async () => {
       return { ok: false, code: "upstream_blocked" };
     },
     async fetchConversation(): Promise<ConversationResult> {
+      fetched = true;
+      return { ok: false, code: "upstream_blocked" };
+    },
+    async fetchTimeline(): Promise<TimelineResult> {
       fetched = true;
       return { ok: false, code: "upstream_blocked" };
     },

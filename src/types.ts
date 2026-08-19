@@ -64,6 +64,12 @@ export type Thread = {
   missingIds: string[];
 };
 
+export type UserPostsPage = {
+  user: XUser;
+  posts: XPost[];
+  nextCursor: string | null;
+};
+
 export type Ok<T> = {
   data: T;
   meta: { cached: boolean; creditsCharged: number; requestId: string; upstreamMs: number };

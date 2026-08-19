@@ -1,4 +1,4 @@
-import type { ConversationResult, FetchPostResult, XAdapter } from "../types.js";
+import type { ConversationResult, FetchPostResult, TimelineResult, XAdapter } from "../types.js";
 
 /**
  * Live X path is a later PR. This stub implements the adapter contract
@@ -10,6 +10,9 @@ export function createLiveXAdapter(): XAdapter {
       return { ok: false, code: "upstream_blocked" };
     },
     async fetchConversation(): Promise<ConversationResult> {
+      return { ok: false, code: "upstream_blocked" };
+    },
+    async fetchTimeline(): Promise<TimelineResult> {
       return { ok: false, code: "upstream_blocked" };
     },
   };
