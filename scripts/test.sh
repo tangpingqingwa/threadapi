@@ -47,6 +47,14 @@ if [[ -f tests/thread.test.ts ]]; then
   grep -q 'SPEC 1' tests/thread.test.ts || fail "tests/thread.test.ts missing SPEC 1"
   grep -q 'missingIds' tests/thread.test.ts || fail "tests/thread.test.ts missing missingIds"
 fi
+if [[ -f tests/html.test.ts ]]; then
+  grep -q 'SPEC 7' tests/html.test.ts || fail "tests/html.test.ts missing SPEC 7"
+  grep -q 'LEGAL_FOOTER' tests/html.test.ts || fail "tests/html.test.ts missing legal footer"
+  grep -q 'adsbygoogle' tests/html.test.ts || fail "tests/html.test.ts missing ads"
+  if grep -qE 'api\.twitter\.com|api\.x\.com' tests/html.test.ts; then
+    fail "tests/html.test.ts mentions live X/Twitter hosts"
+  fi
+fi
 
 if [[ -f package.json ]]; then
   echo "== install =="

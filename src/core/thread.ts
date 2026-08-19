@@ -51,6 +51,29 @@ export type UnrollInput = {
   requestId?: string;
 };
 
+export type FetchThreadInput = {
+  db: ThreadApiDb;
+  adapter: XAdapter;
+  rootId: string;
+  requestId?: string;
+};
+
+export type FetchThreadOk = {
+  ok: true;
+  data: Thread;
+  cached: boolean;
+  requestId: string;
+  upstreamMs: number;
+};
+
+export type FetchThreadErr = {
+  ok: false;
+  error: { code: ErrorCode; message: string; retryable: boolean };
+  requestId: string;
+};
+
+export type FetchThreadResult = FetchThreadOk | FetchThreadErr;
+
 export type GetPostInput = {
   db: ThreadApiDb;
   adapter: XAdapter;
@@ -111,29 +134,49 @@ export async function unroll(input: UnrollInput): Promise<ThreadOutcome> {
     return fail("payment_required", requestId);
   }
 
-  const cacheKey = threadCacheKey(parsed.statusId);
+  const fetched = await fetchThread({
+    db: input.db,
+    adapter: input.adapter,
+    rootId: parsed.statusId,
+    requestId,
+  });
+  if (!fetched.ok) {
+    return fail(fetched.error.code, fetched.requestId, fetched.error.message);
+  }
+  return succeed(input, THREADS_BY_URL_ROUTE, {
+    data: fetched.data,
+    cached: fetched.cached,
+    requestId: fetched.requestId,
+    upstreamMs: fetched.upstreamMs,
+  });
+}
+
+/** Shared by the paid by-url route and the free HTML unroller. Does not charge credits. */
+export async function fetchThread(input: FetchThreadInput): Promise<FetchThreadResult> {
+  const requestId = input.requestId ?? newRequestId();
+  const rootId = trimOrEmpty(input.rootId);
+  if (rootId === undefined || !/^\d+$/.test(rootId)) {
+    return fetchFail("invalid_request", requestId, "id must be a numeric post id.");
+  }
+
+  const cacheKey = threadCacheKey(rootId);
   const cached = getCacheEntry(input.db, cacheKey);
   if (cached.hit && cached.kind === "thread") {
     const data = readCachedThread(cached.body);
     if (data !== null) {
-      return succeed(input, THREADS_BY_URL_ROUTE, {
-        data,
-        cached: true,
-        requestId,
-        upstreamMs: 0,
-      });
+      return { ok: true, data, cached: true, requestId, upstreamMs: 0 };
     }
   }
   if (cached.hit && cached.kind === "tombstone") {
-    return fail(cached.errorCode, requestId);
+    return fetchFail(cached.errorCode, requestId);
   }
 
   const started = performance.now();
   let conversation;
   try {
-    conversation = await input.adapter.fetchConversation(parsed.statusId);
+    conversation = await input.adapter.fetchConversation(rootId);
   } catch {
-    return fail("internal", requestId);
+    return fetchFail("internal", requestId);
   }
   const upstreamMs = Math.max(0, Math.round(performance.now() - started));
 
@@ -141,13 +184,13 @@ export async function unroll(input: UnrollInput): Promise<ThreadOutcome> {
     if (conversation.code === "post_not_found") {
       setCacheTombstone(input.db, cacheKey, "post_not_found");
     }
-    return fail(conversation.code, requestId);
+    return fetchFail(conversation.code, requestId);
   }
 
-  if (!conversation.posts.some((post) => post.id === parsed.statusId)) {
-    return fail("internal", requestId);
+  if (!conversation.posts.some((post) => post.id === rootId)) {
+    return fetchFail("internal", requestId);
   }
-  const thread = assembleThread(parsed.statusId, conversation.posts, conversation.missingIds);
+  const thread = assembleThread(rootId, conversation.posts, conversation.missingIds);
   setBodyCache(
     input.db,
     cacheKey,
@@ -159,12 +202,7 @@ export async function unroll(input: UnrollInput): Promise<ThreadOutcome> {
       rootCreatedAt: thread.posts[0]?.createdAt ?? "",
     }),
   );
-  return succeed(input, THREADS_BY_URL_ROUTE, {
-    data: thread,
-    cached: false,
-    requestId,
-    upstreamMs,
-  });
+  return { ok: true, data: thread, cached: false, requestId, upstreamMs };
 }
 
 export async function getPost(input: GetPostInput): Promise<PostOutcome> {
@@ -296,13 +334,22 @@ function succeed<T>(
 }
 
 function fail(code: ErrorCode, requestId: string, message?: string): Err {
+  const err = fetchFail(code, requestId, message);
   return {
+    error: err.error,
+    meta: { creditsCharged: 0, requestId: err.requestId },
+  };
+}
+
+function fetchFail(code: ErrorCode, requestId: string, message?: string): FetchThreadErr {
+  return {
+    ok: false,
     error: {
       code,
       message: message ?? ERROR_MESSAGE[code],
       retryable: isRetryableCode(code),
     },
-    meta: { creditsCharged: 0, requestId },
+    requestId,
   };
 }
 
