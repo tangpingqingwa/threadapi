@@ -1,0 +1,223 @@
+{
+  "users": {
+    "u_author": {
+      "id": "u_author",
+      "handle": "thread_fixture",
+      "name": "Thread Fixture",
+      "verified": false
+    },
+    "u_quoted": {
+      "id": "u_quoted",
+      "handle": "quoted_fixture",
+      "name": "Quoted Fixture",
+      "verified": true
+    },
+    "u_side": {
+      "id": "u_side",
+      "handle": "side_replier",
+      "name": "Side Replier",
+      "verified": null
+    },
+    "u_protected": {
+      "id": "u_protected",
+      "handle": "locked_account",
+      "name": "Locked Account",
+      "verified": false,
+      "protected": true
+    }
+  },
+  "posts": {
+    "1900000000000000001": {
+      "id": "1900000000000000001",
+      "authorId": "u_author",
+      "text": "1/8 Root of the eight-post fixture thread.",
+      "createdAt": "2024-01-01T12:00:00.000Z",
+      "lang": "en",
+      "replyToId": null,
+      "quoteId": null,
+      "media": [],
+      "engagement": { "replies": 8, "reposts": 1, "likes": 10 }
+    },
+    "1900000000000000002": {
+      "id": "1900000000000000002",
+      "authorId": "u_author",
+      "text": "2/8 Second floor.",
+      "createdAt": "2024-01-01T12:01:00.000Z",
+      "lang": "en",
+      "replyToId": "1900000000000000001",
+      "quoteId": null,
+      "media": [],
+      "engagement": { "replies": 1, "reposts": 0, "likes": 2 }
+    },
+    "1900000000000000003": {
+      "id": "1900000000000000003",
+      "authorId": "u_author",
+      "text": "3/8 Quote in the chain.",
+      "createdAt": "2024-01-01T12:02:00.000Z",
+      "lang": "en",
+      "replyToId": "1900000000000000002",
+      "quoteId": "1910000000000000099",
+      "media": [],
+      "engagement": { "replies": 1, "reposts": 0, "likes": 3 }
+    },
+    "1900000000000000004": {
+      "id": "1900000000000000004",
+      "authorId": "u_author",
+      "text": "4/8 Fourth floor.",
+      "createdAt": "2024-01-01T12:03:00.000Z",
+      "lang": "en",
+      "replyToId": "1900000000000000003",
+      "quoteId": null,
+      "media": [],
+      "engagement": { "replies": 1, "reposts": 0, "likes": 1 }
+    },
+    "1900000000000000005": {
+      "id": "1900000000000000005",
+      "authorId": "u_author",
+      "text": "5/8 Fifth floor.",
+      "createdAt": "2024-01-01T12:04:00.000Z",
+      "lang": "en",
+      "replyToId": "1900000000000000004",
+      "quoteId": null,
+      "media": [],
+      "engagement": { "replies": 1, "reposts": 0, "likes": 1 }
+    },
+    "1900000000000000006": {
+      "id": "1900000000000000006",
+      "authorId": "u_author",
+      "text": "6/8 Sixth floor.",
+      "createdAt": "2024-01-01T12:05:00.000Z",
+      "lang": "en",
+      "replyToId": "1900000000000000005",
+      "quoteId": null,
+      "media": [],
+      "engagement": { "replies": 1, "reposts": 0, "likes": 1 }
+    },
+    "1900000000000000007": {
+      "id": "1900000000000000007",
+      "authorId": "u_author",
+      "text": "7/8 Seventh floor.",
+      "createdAt": "2024-01-01T12:06:00.000Z",
+      "lang": "en",
+      "replyToId": "1900000000000000006",
+      "quoteId": null,
+      "media": [],
+      "engagement": { "replies": 1, "reposts": 0, "likes": 1 }
+    },
+    "1900000000000000008": {
+      "id": "1900000000000000008",
+      "authorId": "u_author",
+      "text": "8/8 Last floor.",
+      "createdAt": "2024-01-01T12:07:00.000Z",
+      "lang": "en",
+      "replyToId": "1900000000000000007",
+      "quoteId": null,
+      "media": [],
+      "engagement": { "replies": 0, "reposts": 0, "likes": 4 }
+    },
+    "1900000000000000090": {
+      "id": "1900000000000000090",
+      "authorId": "u_side",
+      "text": "Side reply from someone else. Out of v1.",
+      "createdAt": "2024-01-01T12:02:30.000Z",
+      "lang": "en",
+      "replyToId": "1900000000000000001",
+      "quoteId": null,
+      "media": [],
+      "engagement": { "replies": 0, "reposts": 0, "likes": 0 }
+    },
+    "1910000000000000099": {
+      "id": "1910000000000000099",
+      "authorId": "u_quoted",
+      "text": "Quoted source post.",
+      "createdAt": "2023-12-31T09:00:00.000Z",
+      "lang": "en",
+      "replyToId": null,
+      "quoteId": null,
+      "media": [],
+      "engagement": { "replies": 2, "reposts": 4, "likes": 20 }
+    },
+    "1920000000000000001": {
+      "id": "1920000000000000001",
+      "authorId": "u_author",
+      "text": "Hole-thread root.",
+      "createdAt": "2024-02-01T10:00:00.000Z",
+      "lang": "en",
+      "replyToId": null,
+      "quoteId": null,
+      "media": [],
+      "engagement": { "replies": 2, "reposts": 0, "likes": 1 }
+    },
+    "1920000000000000003": {
+      "id": "1920000000000000003",
+      "authorId": "u_author",
+      "text": "Hole-thread floor after the gap.",
+      "createdAt": "2024-02-01T10:02:00.000Z",
+      "lang": "en",
+      "replyToId": "1920000000000000002",
+      "quoteId": null,
+      "media": [],
+      "engagement": { "replies": 0, "reposts": 0, "likes": 1 }
+    },
+    "1930000000000000001": {
+      "id": "1930000000000000001",
+      "authorId": "u_author",
+      "text": "",
+      "createdAt": "2024-03-01T08:00:00.000Z",
+      "lang": null,
+      "replyToId": null,
+      "quoteId": null,
+      "media": [
+        {
+          "type": "photo",
+          "url": "https://pbs.twimg.com/media/FIXTURE_PHOTO.jpg",
+          "previewUrl": "https://pbs.twimg.com/media/FIXTURE_PHOTO_small.jpg"
+        }
+      ],
+      "engagement": { "replies": 0, "reposts": 0, "likes": 7 }
+    },
+    "1940000000000000001": {
+      "id": "1940000000000000001",
+      "authorId": "u_protected",
+      "text": "Should never be returned.",
+      "createdAt": "2024-04-01T08:00:00.000Z",
+      "lang": "en",
+      "replyToId": null,
+      "quoteId": null,
+      "media": [],
+      "engagement": { "replies": 0, "reposts": 0, "likes": 0 }
+    }
+  },
+  "conversations": {
+    "1900000000000000001": {
+      "ids": [
+        "1900000000000000001",
+        "1900000000000000002",
+        "1900000000000000003",
+        "1900000000000000004",
+        "1900000000000000005",
+        "1900000000000000006",
+        "1900000000000000007",
+        "1900000000000000008",
+        "1900000000000000090"
+      ]
+    },
+    "1920000000000000001": {
+      "ids": [
+        "1920000000000000001",
+        "1920000000000000002",
+        "1920000000000000003"
+      ]
+    },
+    "1930000000000000001": {
+      "ids": ["1930000000000000001"]
+    },
+    "1940000000000000001": {
+      "ids": ["1940000000000000001"]
+    }
+  },
+  "deletedIds": [
+    "1920000000000000002",
+    "1990000000000000000"
+  ]
+}
