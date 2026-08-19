@@ -1,10 +1,12 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { XEngagement, XMedia, XPost, XUser } from "../../types.js";
+import type { UserPostsPage, XEngagement, XMedia, XPost, XUser } from "../../types.js";
 import type {
   ConversationResult,
   FetchPostResult,
+  TimelineRequest,
+  TimelineResult,
   XAdapter,
 } from "../types.js";
 
@@ -80,6 +82,9 @@ export function createFixtureAdapter(
       }
       return { ok: true, author: root.post.author, posts, missingIds };
     },
+    async fetchTimeline(request: TimelineRequest): Promise<TimelineResult> {
+      return readTimeline(catalog, deleted, request);
+    },
   };
 }
 
@@ -105,6 +110,70 @@ function readPost(
     return { ok: false, code: "protected_user" };
   }
   return { ok: true, post: toXPost(catalog, deleted, record, true) };
+}
+
+function readTimeline(
+  catalog: FixtureCatalog,
+  deleted: Set<string>,
+  request: TimelineRequest,
+): TimelineResult {
+  const user = findUserByHandle(catalog, request.handle);
+  if (user === undefined) {
+    return { ok: false, code: "user_not_found" };
+  }
+  if (user.protected === true) {
+    return { ok: false, code: "protected_user" };
+  }
+
+  const start = parseOffsetCursor(request.cursor);
+  if (start === null) {
+    return { ok: false, code: "user_not_found" };
+  }
+
+  const authored = Object.values(catalog.posts)
+    .filter((record) => record.authorId === user.id && !deleted.has(record.id))
+    .sort(compareTimelinePosts)
+    .map((record) => toXPost(catalog, deleted, record, true));
+
+  const posts = authored.slice(start, start + request.limit);
+  const nextOffset = start + request.limit;
+  const page: UserPostsPage = {
+    user: publicUser(user),
+    posts,
+    nextCursor: nextOffset < authored.length ? String(nextOffset) : null,
+  };
+  return { ok: true, page };
+}
+
+function findUserByHandle(catalog: FixtureCatalog, handle: string): FixtureUser | undefined {
+  const needle = normalizeHandle(handle);
+  if (needle === null) {
+    return undefined;
+  }
+  return Object.values(catalog.users).find((user) => user.handle.toLowerCase() === needle);
+}
+
+export function normalizeHandle(handle: string): string | null {
+  const normalized = handle.trim().replace(/^@+/, "").toLowerCase();
+  return normalized === "" ? null : normalized;
+}
+
+function parseOffsetCursor(cursor: string | undefined): number | null {
+  if (cursor === undefined || cursor === "") {
+    return 0;
+  }
+  if (!/^\d+$/.test(cursor)) {
+    return null;
+  }
+  return Number(cursor);
+}
+
+function compareTimelinePosts(a: FixturePostRecord, b: FixturePostRecord): number {
+  const byTime = Date.parse(b.createdAt) - Date.parse(a.createdAt);
+  if (byTime !== 0) {
+    return byTime;
+  }
+  return a.id < b.id ? 1 : a.id > b.id ? -1 : 0;
 }
 
 function toXPost(

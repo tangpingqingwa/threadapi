@@ -4,14 +4,16 @@ import type { ErrorCode } from "../types.js";
 export const COMPLETED_THREAD_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 export const LIVE_THREAD_TTL_MS = 2 * 60 * 1000;
 export const POST_TTL_MS = 60 * 60 * 1000;
+export const TIMELINE_TTL_MS = 2 * 60 * 1000;
 export const TOMBSTONE_TTL_MS = 24 * 60 * 60 * 1000;
 export const COMPLETED_THREAD_MIN_AGE_MS = 60 * 60 * 1000;
 
+export type CacheBodyKind = "thread" | "post" | "timeline";
 export type CacheTombstoneCode = Extract<ErrorCode, "post_not_found">;
 
 export type CacheLookup =
   | { hit: false }
-  | { hit: true; kind: "thread" | "post"; body: string }
+  | { hit: true; kind: CacheBodyKind; body: string }
   | { hit: true; kind: "tombstone"; errorCode: CacheTombstoneCode };
 
 type CacheRow = {
@@ -29,6 +31,10 @@ export function postCacheKey(id: string): string {
   return `post:${id}`;
 }
 
+export function timelineCacheKey(handle: string, cursor: string, limit: number): string {
+  return `timeline:${handle}:${cursor}:${limit}`;
+}
+
 export function getCacheEntry(
   db: ThreadApiDb,
   cacheKey: string,
@@ -43,7 +49,10 @@ export function getCacheEntry(
   if (row === undefined || row.expires_at <= now.toISOString()) {
     return { hit: false };
   }
-  if ((row.kind === "thread" || row.kind === "post") && row.body !== null) {
+  if (
+    (row.kind === "thread" || row.kind === "post" || row.kind === "timeline") &&
+    row.body !== null
+  ) {
     return { hit: true, kind: row.kind, body: row.body };
   }
   if (row.kind === "tombstone" && row.error_code === "post_not_found") {
@@ -55,7 +64,7 @@ export function getCacheEntry(
 export function setBodyCache(
   db: ThreadApiDb,
   cacheKey: string,
-  kind: "thread" | "post",
+  kind: CacheBodyKind,
   body: string,
   ttlMs: number,
   now: Date = new Date(),
