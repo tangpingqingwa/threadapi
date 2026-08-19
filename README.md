@@ -1,6 +1,7 @@
 # ThreadAPI
 
 Build contract: [SPEC.md](./SPEC.md).
+How we work: [CONTRIBUTING.md](./CONTRIBUTING.md). `main` stays buildable and testable.
 
 X / Twitter thread unroll, single posts, public user timelines, and search. Self-serve.
 
