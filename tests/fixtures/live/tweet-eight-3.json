@@ -1,0 +1,31 @@
+{
+  "id_str": "1900000000000000003",
+  "text": "3/8 Quote in the chain.",
+  "created_at": "2024-01-01T12:02:00.000Z",
+  "lang": "en",
+  "in_reply_to_status_id_str": "1900000000000000002",
+  "user": {
+    "id_str": "u_author",
+    "screen_name": "thread_fixture",
+    "name": "Thread Fixture",
+    "verified": false
+  },
+  "quoted_tweet": {
+    "id_str": "1910000000000000099",
+    "text": "Quoted source post.",
+    "created_at": "2023-12-31T09:00:00.000Z",
+    "lang": "en",
+    "user": {
+      "id_str": "u_quoted",
+      "screen_name": "quoted_fixture",
+      "name": "Quoted Fixture",
+      "verified": true
+    },
+    "reply_count": 2,
+    "retweet_count": 4,
+    "favorite_count": 20
+  },
+  "reply_count": 1,
+  "retweet_count": 0,
+  "favorite_count": 3
+}

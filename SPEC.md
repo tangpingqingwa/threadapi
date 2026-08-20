@@ -195,6 +195,8 @@ Hostile platform. Prefer 503 `upstream_blocked` over a partial hallucinated thre
 
 When X HTML/JSON changes, fixture tests fail the build. There is no “best-effort parse” in production without a versioned adapter flag.
 
+Live X is off by default. Set `THREADAPI_LIVE=1` or `THREADAPI_ADAPTER=live` to select the versioned syndication adapter. `THREADAPI_FIXTURE_ONLY=1` (CI) always forces fixtures. Unrecognised HTML or JSON is `upstream_blocked` and costs **0 credits**.
+
 ## 12. Git collaboration (normative)
 
 Development is GitHub trunk-based. **`main` is always cloneable, buildable, and testable.**

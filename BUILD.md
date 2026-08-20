@@ -72,4 +72,8 @@ A thread is the **root post plus the contiguous self-reply chain from the same a
 - **Description:** search may cost 2 credits if we later see COGS; v1 start at 1. Tools: unroll_thread, get_post, list_user_posts, search_x
 - **Dependencies:** PR 4
 
-Live X adapter = later PR; must fail `upstream_blocked` rather than parse noise.
+### PR 6: live X adapter (env-gated)
+- **Description:** `THREADAPI_LIVE=1` / `THREADAPI_ADAPTER=live` selects the syndication adapter. Default and CI stay on fixtures (`THREADAPI_FIXTURE_ONLY=1`). Versioned JSON only; HTML / captcha / unknown shapes are `upstream_blocked`. 404 holes stay in `missingIds`. No invented tweet text. Live search has no versioned shape yet → `upstream_blocked`.
+- **Files:** src/adapters/x/index.ts, src/adapters/x/parse.ts, src/config.ts, tests/live-adapter.test.ts, tests/fixtures/live/*
+- **Dependencies:** PR 5
+- **Acceptance:** offline parse fixtures; CI never opens a socket to X.

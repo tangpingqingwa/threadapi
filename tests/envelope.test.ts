@@ -47,6 +47,7 @@ test("loadConfig requires THREADAPI_DATABASE in production", () => {
   });
   assert.equal(config.databasePath, "/tmp/threadapi.sqlite");
   assert.equal(config.bootstrapKey, "xk_test_dev");
+  assert.equal(config.adapter, "fixture");
 });
 
 test("createKey stores a hash and lookupKey finds the row", () => {

@@ -88,9 +88,28 @@ if [[ -f src/core/search.ts ]]; then
 fi
 if [[ -f src/adapters/x/index.ts ]]; then
   grep -q 'upstream_blocked' src/adapters/x/index.ts || fail "live X adapter must fail upstream_blocked"
-  if grep -qE 'fetch\s*\(|api\.twitter\.com|api\.x\.com' src/adapters/x/index.ts; then
-    fail "live X adapter must not parse or fetch live hosts"
+  if grep -qE 'api\.twitter\.com|api\.x\.com' src/adapters/x/index.ts src/adapters/x/parse.ts; then
+    fail "live X adapter must not call official X API hosts"
   fi
+fi
+if [[ -f src/adapters/index.ts ]]; then
+  grep -q 'THREADAPI_LIVE' src/adapters/index.ts || fail "createAppAdapter must be env-gated"
+  grep -q 'THREADAPI_FIXTURE_ONLY' src/adapters/index.ts || fail "createAppAdapter must honor THREADAPI_FIXTURE_ONLY"
+fi
+if [[ -f tests/live-adapter.test.ts ]]; then
+  grep -q 'THREADAPI_LIVE' tests/live-adapter.test.ts || fail "tests/live-adapter.test.ts missing THREADAPI_LIVE"
+  grep -q 'THREADAPI_FIXTURE_ONLY' tests/live-adapter.test.ts || fail "tests/live-adapter.test.ts missing THREADAPI_FIXTURE_ONLY"
+  grep -q 'upstream_blocked' tests/live-adapter.test.ts || fail "tests/live-adapter.test.ts missing upstream_blocked"
+  grep -q 'missingIds' tests/live-adapter.test.ts || fail "tests/live-adapter.test.ts missing missingIds"
+  grep -q 'protected_user' tests/live-adapter.test.ts || fail "tests/live-adapter.test.ts missing protected_user"
+  grep -q 'post_not_found' tests/live-adapter.test.ts || fail "tests/live-adapter.test.ts missing post_not_found"
+  if grep -qE 'api\.twitter\.com|api\.x\.com' tests/live-adapter.test.ts; then
+    fail "tests/live-adapter.test.ts mentions official X API hosts"
+  fi
+fi
+if [[ -d tests/fixtures/live ]]; then
+  [[ -f tests/fixtures/live/challenge.html ]] || fail "missing tests/fixtures/live/challenge.html"
+  [[ -f tests/fixtures/live/noise.json ]] || fail "missing tests/fixtures/live/noise.json"
 fi
 
 echo "== llms.txt + MCP tools =="
@@ -132,6 +151,10 @@ if [[ -f package.json ]]; then
 
   echo "== unit tests =="
   # Quoted so bash 3.2 does not eat **; Node 22's test runner expands the glob.
+  # Fixture adapter only — never hit live X, even if the developer exported THREADAPI_LIVE.
+  export THREADAPI_FIXTURE_ONLY=1
+  unset THREADAPI_LIVE || true
+  unset THREADAPI_ADAPTER || true
   test_log="$(mktemp)"
   trap 'rm -f "$test_log"' EXIT
   set +e

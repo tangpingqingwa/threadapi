@@ -1,12 +1,40 @@
 const DEFAULT_PORT = 3000;
 const DEFAULT_DATABASE_PATH = "./data/threadapi.sqlite";
 
+export type AdapterKind = "fixture" | "live";
+
 export type AppConfig = {
   port: number;
   databasePath: string;
   bootstrapKey: string | undefined;
   nodeEnv: string;
+  adapter: AdapterKind;
 };
+
+export function isTruthyEnv(value: string | undefined): boolean {
+  if (value === undefined) {
+    return false;
+  }
+  const normalized = value.trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+}
+
+/** Live X is off unless THREADAPI_LIVE=1 or THREADAPI_ADAPTER=live. CI forces fixture. */
+export function resolveAdapterKind(env: NodeJS.ProcessEnv = process.env): AdapterKind {
+  if (isTruthyEnv(env.THREADAPI_FIXTURE_ONLY)) {
+    return "fixture";
+  }
+  const named = (env.THREADAPI_ADAPTER ?? "").trim().toLowerCase();
+  if (named === "live") {
+    return "live";
+  }
+  if (named === "fixture" || named === "") {
+    return isTruthyEnv(env.THREADAPI_LIVE) ? "live" : "fixture";
+  }
+  throw new Error(
+    `THREADAPI_ADAPTER must be fixture or live, got ${JSON.stringify(env.THREADAPI_ADAPTER)}`,
+  );
+}
 
 export function parseListenPort(value = process.env.PORT): number {
   if (value === undefined || value === "") {
@@ -35,5 +63,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     bootstrapKey:
       bootstrapKey !== undefined && bootstrapKey !== "" ? bootstrapKey : undefined,
     nodeEnv,
+    adapter: resolveAdapterKind(env),
   };
 }
