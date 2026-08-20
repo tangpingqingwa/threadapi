@@ -469,11 +469,17 @@ function isProtectedPayloadValue(raw: unknown): boolean {
   if (raw.code === "protected_user") {
     return true;
   }
+  if (isLimitedVisibilityTombstone(raw)) {
+    return true;
+  }
   return false;
 }
 
 function isDeletedPayload(raw: unknown): boolean {
   if (!isRecord(raw)) {
+    return false;
+  }
+  if (isLimitedVisibilityTombstone(raw)) {
     return false;
   }
   if (raw.tombstone !== undefined && raw.tombstone !== null) {
@@ -486,6 +492,33 @@ function isDeletedPayload(raw: unknown): boolean {
     return true;
   }
   return false;
+}
+
+function readTombstoneText(raw: Record<string, unknown>): string {
+  const tombstone = raw.tombstone;
+  if (typeof tombstone === "string") {
+    return tombstone;
+  }
+  if (!isRecord(tombstone)) {
+    return "";
+  }
+  if (typeof tombstone.text === "string") {
+    return tombstone.text;
+  }
+  if (isRecord(tombstone.text) && typeof tombstone.text.text === "string") {
+    return tombstone.text.text;
+  }
+  return "";
+}
+
+/** Live syndication uses a tombstone, not HTTP 403, for protected authors. */
+function isLimitedVisibilityTombstone(raw: Record<string, unknown>): boolean {
+  const text = readTombstoneText(raw).toLowerCase();
+  return (
+    text.includes("limits who can view") ||
+    text.includes("protected account") ||
+    text.includes("these posts are protected")
+  );
 }
 
 function isUserMissingPayload(raw: unknown): boolean {

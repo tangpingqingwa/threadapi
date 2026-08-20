@@ -79,8 +79,22 @@ export function createLiveXAdapter(options: LiveXAdapterOptions = {}): XAdapter 
   };
 }
 
+/** Same public token react-tweet / platform embeds send. Not a secret. */
+export function syndicationTweetToken(id: string): string {
+  const n = Number(id);
+  if (!Number.isFinite(n)) {
+    return "0";
+  }
+  return ((n / 1e15) * Math.PI).toString(36).replace(/(0+|\.)/g, "");
+}
+
 function tweetUrl(origin: string, id: string): string {
-  return `${origin}/tweet-result?id=${encodeURIComponent(id)}&lang=en`;
+  const params = new URLSearchParams({
+    id,
+    lang: "en",
+    token: syndicationTweetToken(id),
+  });
+  return `${origin}/tweet-result?${params.toString()}`;
 }
 
 function timelineUrl(origin: string, handle: string, cursor: string | undefined, limit: number): string {
