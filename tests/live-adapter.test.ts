@@ -8,6 +8,7 @@ import { createFixtureAdapter } from "../src/adapters/x/fixture.js";
 import {
   createLiveXAdapter,
   LIVE_X_SYNDICATION_ORIGIN,
+  syndicationTweetToken,
   type LiveXFetch,
   type LiveXHttpResponse,
 } from "../src/adapters/x/index.js";
@@ -68,6 +69,7 @@ function recordedFetch(): { fetch: LiveXFetch; urls: string[] } {
     assert.equal(parsed.origin, LIVE_X_SYNDICATION_ORIGIN);
     if (parsed.pathname === "/tweet-result") {
       const id = parsed.searchParams.get("id") ?? "";
+      assert.equal(parsed.searchParams.get("token"), syndicationTweetToken(id));
       if (id === DELETED || id === HOLE_MISSING) {
         return jsonResponse("tweet-deleted.json", 404);
       }
@@ -206,6 +208,23 @@ test("protected, deleted, and image-only map to SPEC failures or empty text", as
     ok: false,
     code: "user_not_found",
   });
+});
+
+test("syndicationTweetToken matches the public widget formula", () => {
+  assert.equal(syndicationTweetToken("20"), "6dq1a2xwd93");
+  assert.equal(syndicationTweetToken("28"), "8xm1siinpqt");
+});
+
+test("limited-visibility tombstone is protected_user; deleted tombstone is not invented", async () => {
+  const limited = readLive("tweet-limited.json");
+  assert.deepEqual(parseFetchPost(limited, "application/json"), { ok: false, code: "protected_user" });
+  assert.equal(limited.includes("limits who can view"), true);
+
+  const deletedBody = JSON.stringify({
+    __typename: "TweetTombstone",
+    tombstone: { text: { text: "This Post was deleted by the Post author. Learn more" } },
+  });
+  assert.deepEqual(parseFetchPost(deletedBody, "application/json"), { ok: false, code: "post_not_found" });
 });
 
 test("HTML challenge and unknown JSON are upstream_blocked, never parsed as tweets", async () => {
