@@ -112,6 +112,44 @@ if [[ -d tests/fixtures/live ]]; then
   [[ -f tests/fixtures/live/noise.json ]] || fail "missing tests/fixtures/live/noise.json"
 fi
 
+echo "== deploy artifacts (Dockerfile + runbook) =="
+[[ -f Dockerfile ]] || fail "missing Dockerfile"
+[[ -f .env.example ]] || fail "missing .env.example"
+[[ -f deploy/runbook.md ]] || fail "missing deploy/runbook.md"
+grep -q 'node:22' Dockerfile || fail "Dockerfile must use Node 22"
+grep -qE '^USER[[:space:]]+node$' Dockerfile || fail "Dockerfile must run as non-root USER node"
+grep -q 'PORT' Dockerfile || fail "Dockerfile must honor PORT"
+grep -q 'src/server.ts' Dockerfile || fail "Dockerfile must start src/server.ts"
+if grep -E 'THREADAPI_LIVE[[:space:]]*=[[:space:]]*(1|true|yes|on)' Dockerfile >/dev/null; then
+  fail "Dockerfile must not enable live X"
+fi
+if grep -E 'THREADAPI_ADAPTER[[:space:]]*=[[:space:]]*live' Dockerfile >/dev/null; then
+  fail "Dockerfile must not set THREADAPI_ADAPTER=live"
+fi
+grep -q 'THREADAPI_LIVE' .env.example || fail ".env.example missing THREADAPI_LIVE"
+grep -q 'THREADAPI_FIXTURE_ONLY' .env.example || fail ".env.example missing THREADAPI_FIXTURE_ONLY"
+grep -q 'THREADAPI_DATABASE' .env.example || fail ".env.example missing THREADAPI_DATABASE"
+grep -q 'THREADAPI_BOOTSTRAP_KEY' .env.example || fail ".env.example missing THREADAPI_BOOTSTRAP_KEY"
+if grep -E '^[[:space:]]*THREADAPI_LIVE=1[[:space:]]*$' .env.example >/dev/null; then
+  fail ".env.example must not default live X on"
+fi
+if grep -E '^[[:space:]]*THREADAPI_ADAPTER=live[[:space:]]*$' .env.example >/dev/null; then
+  fail ".env.example must not default THREADAPI_ADAPTER=live"
+fi
+if grep -E '^[[:space:]]*THREADAPI_BOOTSTRAP_KEY=xk_(live|test)_' .env.example >/dev/null; then
+  fail ".env.example must not ship a real bootstrap key"
+fi
+grep -q '/healthz' deploy/runbook.md || fail "runbook missing /healthz"
+grep -q 'THREADAPI_LIVE=1' deploy/runbook.md || fail "runbook missing how to enable live"
+grep -q 'docker build' deploy/runbook.md || fail "runbook missing docker build"
+grep -q 'docker run' deploy/runbook.md || fail "runbook missing docker run"
+if grep -qE 'api\.twitter\.com|api\.x\.com' Dockerfile; then
+  fail "Dockerfile must not mention official X API hosts"
+fi
+if grep -qE 'api\.twitter\.com|api\.x\.com' .github/workflows/ci.yml; then
+  fail "CI must not mention official X API hosts"
+fi
+
 echo "== llms.txt + MCP tools =="
 [[ -f src/mcp/server.ts ]] || fail "missing src/mcp/server.ts"
 [[ -f src/mcp/tools.ts ]] || fail "missing src/mcp/tools.ts"
