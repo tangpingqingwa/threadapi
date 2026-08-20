@@ -72,6 +72,17 @@ Success: English SEO can produce five-figure monthly visits on the free page; AP
 
 Launch posts, competitor accounts, and our own growth threads land in a local store via ThreadAPI. If we still hit Show more, it is not done.
 
+## Adapters
+
+Default is the recorded fixture catalog. Live X is env-gated:
+
+```bash
+THREADAPI_LIVE=1            # or THREADAPI_ADAPTER=live
+THREADAPI_FIXTURE_ONLY=1    # CI / scripts/test.sh always force fixtures
+```
+
+The live path only accepts a versioned syndication JSON shape. HTML, captchas, and unknown JSON are `upstream_blocked` (503, 0 credits). Missing self-replies go in `missingIds`. Tweet text is never invented.
+
 ## Risk
 
 X is hostile to automation. Prefer a loud error over a hallucinated thread. Independent, not affiliated. No logged-in user data.

@@ -1,0 +1,22 @@
+{
+  "id_str": "1920000000000000001",
+  "text": "Hole-thread root.",
+  "created_at": "2024-02-01T10:00:00.000Z",
+  "lang": "en",
+  "user": {
+    "id_str": "u_author",
+    "screen_name": "thread_fixture",
+    "name": "Thread Fixture",
+    "verified": false
+  },
+  "conversation": {
+    "ids": [
+      "1920000000000000001",
+      "1920000000000000002",
+      "1920000000000000003"
+    ]
+  },
+  "reply_count": 2,
+  "retweet_count": 0,
+  "favorite_count": 1
+}

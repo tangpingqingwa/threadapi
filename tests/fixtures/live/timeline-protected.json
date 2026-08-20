@@ -1,0 +1,9 @@
+{
+  "code": "protected_user",
+  "user": {
+    "id_str": "u_protected",
+    "screen_name": "locked_account",
+    "name": "Locked Account",
+    "protected": true
+  }
+}

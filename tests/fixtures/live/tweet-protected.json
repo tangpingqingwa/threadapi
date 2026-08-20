@@ -1,0 +1,16 @@
+{
+  "id_str": "1940000000000000001",
+  "text": "Should never be returned.",
+  "created_at": "2024-04-01T08:00:00.000Z",
+  "lang": "en",
+  "user": {
+    "id_str": "u_protected",
+    "screen_name": "locked_account",
+    "name": "Locked Account",
+    "verified": false,
+    "protected": true
+  },
+  "reply_count": 0,
+  "retweet_count": 0,
+  "favorite_count": 0
+}

@@ -20,7 +20,7 @@ Authorization: Bearer xk_live_...
 Authorization: Bearer xk_test_...
 ```
 
-Same key space for REST and MCP. No scopes. `xk_test_*` uses recorded fixtures and never hits live X.
+Same key space for REST and MCP. No scopes. `xk_test_*` uses recorded fixtures and never hits live X. Production live X is env-gated (`THREADAPI_LIVE=1`); HTML / unknown JSON is `upstream_blocked`.
 
 ## MCP tools
 
